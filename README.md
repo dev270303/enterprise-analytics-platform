@@ -2,7 +2,7 @@
 
 **Operations intelligence for a multi-region business.** A Spring Boot REST API and PostgreSQL analytics layer, with a live dashboard covering revenue, customers, products and support SLAs.
 
-**Live demo:** `https://<your-service>.onrender.com` (click **Analyst** to see the SQL behind every chart)
+**Live demo:** `https://enterprise-analytics.onrender.com` (click **Analyst** to see the SQL behind every chart)
 *Hosted on a free tier, so the first load after a quiet period takes about a minute.*
 
 ![Overview dashboard](docs/screenshots/overview.png)
