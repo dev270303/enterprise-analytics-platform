@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enterprise Analytics Platform</title>
+  <meta name="description" content="Enterprise operations analytics built with Spring Boot, PostgreSQL and analytical SQL.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Crect x='7' y='16' width='4' height='9' rx='1.5' fill='white'/%3E%3Crect x='14' y='10' width='4' height='15' rx='1.5' fill='white'/%3E%3Crect x='21' y='6' width='4' height='19' rx='1.5' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============================ LOGIN ============================ -->
+<main id="login-view" class="login" hidden>
+  <section class="login-intro">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Enterprise Analytics Platform</div>
+    <h1>Operations intelligence for a multi-region business</h1>
+    <p class="lede">
+      Revenue, customers, products and support SLAs for a synthetic company operating in 17 Indian cities.
+      That's 24 months of data, about 60,000 orders and 9,000 support tickets.
+      Every chart comes from an analytical SQL query (CTEs, window functions, percentiles) served by a Spring Boot REST API.
+    </p>
+    <ul class="stack" aria-label="Technology stack">
+      <li>Java 21</li><li>Spring Boot 3</li><li>Spring Security + JWT</li><li>PostgreSQL</li>
+      <li>Flyway</li><li>JdbcTemplate + JPA</li><li>Docker</li><li>GitHub Actions</li>
+    </ul>
+    <p class="muted small">Sign in with a demo role. Each role sees different things. <strong>Analyst</strong> can open the SQL behind every chart, and <strong>Admin</strong> also gets user management.</p>
+  </section>
+
+  <section class="login-card" aria-labelledby="login-title">
+    <h2 id="login-title">Try the live demo</h2>
+    <div id="server-status" class="server-status" role="status" aria-live="polite">
+      <span class="dot"></span><span class="text">Checking server…</span>
+    </div>
+    <div class="demo-buttons">
+      <button class="demo-btn" data-user="manager"><strong>Manager</strong><span>Dashboards</span></button>
+      <button class="demo-btn" data-user="analyst"><strong>Analyst</strong><span>Dashboards + SQL</span></button>
+      <button class="demo-btn" data-user="admin"><strong>Admin</strong><span>Everything + users</span></button>
+    </div>
+    <details class="manual-login">
+      <summary>Sign in manually</summary>
+      <form id="login-form" autocomplete="on">
+        <label>Username <input name="username" required maxlength="40" autocomplete="username"></label>
+        <label>Password <input name="password" type="password" required maxlength="100" autocomplete="current-password"></label>
+        <button type="submit" class="btn primary">Sign in</button>
+      </form>
+    </details>
+    <p id="login-error" class="error" role="alert" hidden></p>
+    <p class="muted small">Hosted on a free tier. After a period with no visitors, the first load can take about a minute while the server starts.</p>
+  </section>
+</main>
+
+<!-- ============================ APP ============================ -->
+<div id="app-view" hidden>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span class="brand-text">Enterprise Analytics</span></div>
+    <nav class="tabs" role="tablist" aria-label="Dashboards">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="sales" aria-selected="false">Sales</button>
+      <button role="tab" data-tab="customers" aria-selected="false">Customers</button>
+      <button role="tab" data-tab="support" aria-selected="false">Support</button>
+      <button role="tab" data-tab="admin" aria-selected="false" hidden id="admin-tab">Admin</button>
+    </nav>
+    <div class="user">
+      <span id="user-name"></span><span id="user-role" class="role-pill"></span>
+      <button id="logout" class="btn ghost small">Sign out</button>
+    </div>
+  </header>
+
+  <div class="filterbar">
+    <div class="segmented" role="radiogroup" aria-label="Region filter" id="region-filter">
+      <button role="radio" data-region="" aria-checked="true">All regions</button>
+      <button role="radio" data-region="North" aria-checked="false">North</button>
+      <button role="radio" data-region="South" aria-checked="false">South</button>
+      <button role="radio" data-region="East" aria-checked="false">East</button>
+      <button role="radio" data-region="West" aria-checked="false">West</button>
+    </div>
+    <span id="as-of" class="muted small"></span>
+  </div>
+
+  <main class="content">
+    <!-- OVERVIEW -->
+    <section data-panel="overview" class="panel">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid">
+        <article class="card span-2" data-sql="revenue_trend">
+          <header><h3>Monthly revenue</h3><p>With 3-month moving average · delivered and shipped orders</p></header>
+          <div class="chart-box tall"><canvas id="chart-revenue" aria-label="Monthly revenue line chart" role="img"></canvas></div>
+        </article>
+        <article class="card" data-sql="region_performance">
+          <header><h3>Revenue by region</h3><p>Trailing 12 months · all regions, shown for comparison</p></header>
+          <div id="region-list" class="region-list"></div>
+        </article>
+        <article class="card" data-sql="support_kpis">
+          <header><h3>Support at a glance</h3><p>Backlog now and the last 30 days</p></header>
+          <div id="support-mini" class="mini-stats"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SALES -->
+    <section data-panel="sales" class="panel" hidden>
+      <div class="grid">
+        <article class="card" data-sql="category_mix">
+          <header><h3>Revenue by category</h3><p>Trailing 12 months</p></header>
+          <div class="chart-box tall"><canvas id="chart-categories" role="img" aria-label="Revenue by category bar chart"></canvas></div>
+        </article>
+        <article class="card" data-sql="category_mix">
+          <header><h3>Category margin</h3><p>Gross margin and share of revenue</p></header>
+          <div class="table-wrap"><table id="table-categories"></table></div>
+        </article>
+        <article class="card span-2" data-sql="top_products">
+          <header><h3>Top 10 products</h3><p>Ranked overall and within category (<code>RANK() OVER (PARTITION BY …)</code>)</p></header>
+          <div class="table-wrap"><table id="table-products"></table></div>
+        </article>
+        <article class="card span-2" data-sql="rep_leaderboard">
+          <header><h3>Sales rep leaderboard</h3><p>Top 3 reps per region · all regions</p></header>
+          <div class="table-wrap"><table id="table-reps"></table></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section data-panel="customers" class="panel" hidden>
+      <div class="grid">
+        <article class="card span-2" data-sql="customer_growth">
+          <header><h3>New vs returning customers</h3><p>Customers who ordered each month</p></header>
+          <div class="chart-box tall"><canvas id="chart-growth" role="img" aria-label="New versus returning customers stacked bar chart"></canvas></div>
+        </article>
+        <article class="card span-2" data-sql="cohort_retention">
+          <header><h3>Cohort retention</h3><p>Percent of each first-purchase cohort ordering again N months later</p></header>
+          <div class="table-wrap"><table id="table-cohorts" class="heatmap"></table></div>
+        </article>
+        <article class="card" data-sql="segment_summary">
+          <header><h3>Segments</h3><p>Lifetime value by customer segment</p></header>
+          <div class="table-wrap"><table id="table-segments"></table></div>
+        </article>
+        <article class="card" data-sql="top_customers">
+          <header><h3>Top customers</h3><p>By lifetime value</p></header>
+          <div class="table-wrap"><table id="table-customers"></table></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SUPPORT -->
+    <section data-panel="support" class="panel" hidden>
+      <p class="muted small panel-note">Support metrics cover all regions.</p>
+      <div class="kpis" id="support-kpis"></div>
+      <div class="grid">
+        <article class="card" data-sql="ticket_sla">
+          <header><h3>SLA breach rate by category</h3><p>Resolved tickets, trailing 12 months</p></header>
+          <div class="chart-box"><canvas id="chart-sla" role="img" aria-label="SLA breach rate by category"></canvas></div>
+        </article>
+        <article class="card" data-sql="ticket_sla">
+          <header><h3>Resolution time</h3><p>Mean and 90th percentile (<code>percentile_cont</code>)</p></header>
+          <div class="table-wrap"><table id="table-sla"></table></div>
+        </article>
+        <article class="card span-2" data-sql="ticket_trend">
+          <header><h3>Tickets opened per month</h3></header>
+          <div class="chart-box"><canvas id="chart-tickets" role="img" aria-label="Tickets opened per month"></canvas></div>
+        </article>
+        <article class="card span-2" data-sql="agent_workload">
+          <header><h3>Agent leaderboard</h3><p>Last 90 days · ranked by SLA met, then speed</p></header>
+          <div class="table-wrap"><table id="table-agents"></table></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section data-panel="admin" class="panel" hidden>
+      <div class="grid">
+        <article class="card span-2">
+          <header><h3>Users</h3><p>From <code>GET /api/admin/users</code>, ADMIN role only</p></header>
+          <div class="table-wrap"><table id="table-users"></table></div>
+        </article>
+        <article class="card">
+          <header><h3>Analytics cache</h3><p>Results are cached per query and region, so the serverless database can sleep between visits.</p></header>
+          <button id="clear-cache" class="btn">Clear cache</button>
+          <p id="cache-status" class="muted small" role="status"></p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer muted small">
+    Synthetic data for demonstration only. <a href="api/health">API health</a>
+  </footer>
+</div>
+
+<!-- SQL dialog -->
+<dialog id="sql-dialog" aria-labelledby="sql-title">
+  <header><h3 id="sql-title">SQL</h3><button class="btn ghost small" id="sql-close" aria-label="Close">Close</button></header>
+  <pre><code id="sql-code"></code></pre>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="vendor/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
