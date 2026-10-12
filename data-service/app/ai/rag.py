@@ -119,25 +119,26 @@ def ingest_document(file_name: str, content: bytes, uploaded_by: str | None = No
     title = _title_from(text, file_name)
     chunks = chunk_text(text, title)
 
-    embeddings = None
-    llm = llm or get_llm()
-    if llm is not None and embeddings_available():
-        try:
-            embeddings = []
-            for i in range(0, len(chunks), 32):
-                batch = chunks[i:i + 32]
-                embeddings.extend(llm.embed([f"{title} - {c.section}\n{c.content}" for c in batch]))
-        except LLMError as exc:
-            log.warning("embedding failed for %s, indexing for keyword search only: %s", file_name, exc)
-            embeddings = None
-
     with connect() as conn:
         register_vector(conn)
         cur = conn.cursor()
         existing = cur.execute("SELECT id, content_hash, embedded FROM rag_documents WHERE source_name = %s",
                                (file_name,)).fetchone()
-        if existing and existing["content_hash"] == digest and (existing["embedded"] or embeddings is None):
+        llm = llm or get_llm()
+        can_embed = llm is not None and embeddings_available()
+        # skip unchanged documents (checked before calling the embedding API, to save quota on every restart)
+        if existing and existing["content_hash"] == digest and (existing["embedded"] or not can_embed):
             return {"document": title, "source": file_name, "chunks": None, "status": "unchanged"}
+        embeddings = None
+        if can_embed:
+            try:
+                embeddings = []
+                for i in range(0, len(chunks), 32):
+                    batch = chunks[i:i + 32]
+                    embeddings.extend(llm.embed([f"{title} - {c.section}\n{c.content}" for c in batch]))
+            except LLMError as exc:
+                log.warning("embedding failed for %s, indexing for keyword search only: %s", file_name, exc)
+                embeddings = None
         if existing:
             doc_id = existing["id"]
             cur.execute("DELETE FROM rag_chunks WHERE document_id = %s", (doc_id,))
