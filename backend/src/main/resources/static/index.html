@@ -14,17 +14,20 @@
 <main id="login-view" class="login" hidden>
   <section class="login-intro">
     <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Enterprise Analytics Platform</div>
-    <h1>Operations intelligence for a multi-region business</h1>
+    <h1>Operations intelligence with an AI data analyst</h1>
     <p class="lede">
-      Revenue, customers, products and support SLAs for a synthetic company operating in 17 Indian cities.
-      That's 24 months of data, about 60,000 orders and 9,000 support tickets.
-      Every chart comes from an analytical SQL query (CTEs, window functions, percentiles) served by a Spring Boot REST API.
+      Dashboards, a data-quality-checked ETL pipeline, machine-learning customer segments, daily anomaly reports,
+      and an assistant that answers questions about the business in plain English.
+      It writes the SQL itself, safely, and also reads company policy documents.
+      Built on a synthetic company in 17 Indian cities: about 60,000 orders and 9,500 support tickets.
     </p>
     <ul class="stack" aria-label="Technology stack">
-      <li>Java 21</li><li>Spring Boot 3</li><li>Spring Security + JWT</li><li>PostgreSQL</li>
-      <li>Flyway</li><li>JdbcTemplate + JPA</li><li>Docker</li><li>GitHub Actions</li>
+      <li>Java 21</li><li>Spring Boot 3</li><li>Spring Security + JWT</li><li>PostgreSQL + pgvector</li>
+      <li>Flyway</li><li>Python · FastAPI</li><li>pandas · scikit-learn</li><li>LLM text-to-SQL</li><li>RAG</li>
+      <li>Docker</li><li>GitHub Actions</li>
     </ul>
-    <p class="muted small">Sign in with a demo role. Each role sees different things. <strong>Analyst</strong> can open the SQL behind every chart, and <strong>Admin</strong> also gets user management.</p>
+    <p class="muted small">Sign in with a demo role, and each one sees different things. <strong>Analyst</strong> can open the SQL behind every chart.
+      <strong>Admin</strong> can run the ETL pipeline as a dry run on demo accounts. <strong>Employee</strong> sees support data only.</p>
   </section>
 
   <section class="login-card" aria-labelledby="login-title">
@@ -35,7 +38,8 @@
     <div class="demo-buttons">
       <button class="demo-btn" data-user="manager"><strong>Manager</strong><span>Dashboards</span></button>
       <button class="demo-btn" data-user="analyst"><strong>Analyst</strong><span>Dashboards + SQL</span></button>
-      <button class="demo-btn" data-user="admin"><strong>Admin</strong><span>Everything + users</span></button>
+      <button class="demo-btn" data-user="admin"><strong>Admin</strong><span>Everything + data loads</span></button>
+      <button class="demo-btn" data-user="employee"><strong>Employee</strong><span>Support data only</span></button>
     </div>
     <details class="manual-login">
       <summary>Sign in manually</summary>
@@ -59,10 +63,13 @@
       <button role="tab" data-tab="sales" aria-selected="false">Sales</button>
       <button role="tab" data-tab="customers" aria-selected="false">Customers</button>
       <button role="tab" data-tab="support" aria-selected="false">Support</button>
-      <button role="tab" data-tab="admin" aria-selected="false" hidden id="admin-tab">Admin</button>
+      <button role="tab" data-tab="ai" aria-selected="false">AI Analyst</button>
+      <button role="tab" data-tab="insights" aria-selected="false">Insights</button>
+      <button role="tab" data-tab="data" aria-selected="false">Data</button>
+      <button role="tab" data-tab="admin" aria-selected="false">Admin</button>
     </nav>
     <div class="user">
-      <span id="user-name"></span><span id="user-role" class="role-pill"></span>
+      <span id="user-name"></span><span id="user-role" class="role-pill"></span><span id="user-owner" class="role-pill owner" hidden>Owner</span>
       <button id="logout" class="btn ghost small">Sign out</button>
     </div>
   </header>
@@ -131,6 +138,14 @@
           <header><h3>Cohort retention</h3><p>Percent of each first-purchase cohort ordering again N months later</p></header>
           <div class="table-wrap"><table id="table-cohorts" class="heatmap"></table></div>
         </article>
+        <article class="card span-2" data-sql="rfm_segments">
+          <header><h3>Machine-learning segments</h3><p>RFM features → K-Means clustering (scikit-learn), refreshed by the data service</p></header>
+          <div id="rfm-segments"></div>
+        </article>
+        <article class="card span-2" data-sql="churn_watchlist">
+          <header><h3>Churn watchlist</h3><p>Highest-value customers at HIGH churn risk: days since last order are more than 3× their usual gap</p></header>
+          <div class="table-wrap"><table id="table-churn"></table></div>
+        </article>
         <article class="card" data-sql="segment_summary">
           <header><h3>Segments</h3><p>Lifetime value by customer segment</p></header>
           <div class="table-wrap"><table id="table-segments"></table></div>
@@ -166,6 +181,114 @@
       </div>
     </section>
 
+    <!-- AI ANALYST -->
+    <section data-panel="ai" class="panel" hidden>
+      <div class="ai-layout">
+        <div class="ai-main">
+          <div id="ai-status" class="ai-status muted small" role="status"></div>
+          <div id="ai-thread" class="ai-thread" aria-live="polite">
+            <div class="ai-empty">
+              <h3>Ask about the business in plain English</h3>
+              <p class="muted">Data questions become one safe, read-only SQL query that you can inspect.
+                 Policy questions are answered from company documents, with citations.</p>
+              <div class="chips" id="ai-examples"></div>
+            </div>
+          </div>
+          <form id="ai-form" class="ai-form">
+            <input id="ai-input" name="q" maxlength="500" autocomplete="off" placeholder="e.g. Top 5 products by revenue in Delhi during the last 6 months" aria-label="Question">
+            <button class="btn primary" type="submit">Ask</button>
+          </form>
+        </div>
+        <aside class="ai-side">
+          <article class="card">
+            <header><h3>How it stays safe</h3></header>
+            <ol class="safety">
+              <li><strong>Curated views:</strong> the model only sees 7 documented <code>ai.*</code> views, with no personal data.</li>
+              <li><strong>SQL validator:</strong> the query is parsed (sqlglot). It must be a single SELECT on allowed views, with no dangerous functions, and gets a LIMIT.</li>
+              <li><strong>Least-privilege role:</strong> it runs as <code>ai_reader</code>, which can only read the <code>ai</code> schema.</li>
+              <li><strong>Read-only transaction:</strong> with a statement timeout and a row cap, always rolled back.</li>
+              <li><strong>Budgets:</strong> per-user hourly and global daily limits.</li>
+            </ol>
+          </article>
+          <article class="card">
+            <header><h3>Knowledge base</h3><p>Policy documents used for answers (RAG: full-text + pgvector, fused with RRF)</p></header>
+            <ul id="ai-docs" class="doc-list"></ul>
+            <form id="doc-form" class="doc-form" hidden>
+              <input type="file" name="file" accept=".md,.txt,.pdf" required>
+              <button class="btn small" type="submit">Upload document</button>
+            </form>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <!-- INSIGHTS -->
+    <section data-panel="insights" class="panel" hidden>
+      <div class="grid">
+        <article class="card span-2">
+          <header><h3 id="insight-headline">Daily business intelligence report</h3><p id="insight-meta"></p></header>
+          <p id="insight-summary" class="insight-summary" hidden></p>
+          <div class="kpis compact" id="insight-kpis"></div>
+          <ul id="insight-bullets" class="insight-bullets"></ul>
+          <div class="row-actions">
+            <a id="insight-email" class="btn small" target="_blank" rel="noopener" hidden>Open the e-mail version</a>
+            <button id="insight-run" class="btn small" hidden>Generate a report now</button>
+          </div>
+        </article>
+        <article class="card span-2">
+          <header><h3>Anomalies</h3><p>This week vs an 8-week baseline: flagged when |z| ≥ 2 and the change is at least 15%</p></header>
+          <div class="table-wrap"><table id="table-anomalies"></table></div>
+        </article>
+        <article class="card">
+          <header><h3>SLA this week</h3></header>
+          <div id="insight-sla" class="mini-stats"></div>
+        </article>
+        <article class="card">
+          <header><h3>Report history</h3><p>A GitHub Actions schedule runs the job every morning at 08:00 IST</p></header>
+          <div class="table-wrap"><table id="table-reports"></table></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- DATA -->
+    <section data-panel="data" class="panel" hidden>
+      <div class="grid">
+        <article class="card" id="upload-card">
+          <header><h3>Load data</h3><p>CSV → validate → clean → transform → PostgreSQL (Python, pandas)</p></header>
+          <form id="upload-form" class="upload-form">
+            <label>File type
+              <select name="entity">
+                <option value="">Detect automatically</option>
+                <option value="customers">customers</option><option value="products">products</option>
+                <option value="employees">employees</option><option value="orders">orders</option>
+                <option value="order_items">order_items</option><option value="tickets">tickets</option>
+              </select>
+            </label>
+            <label>CSV file <input type="file" name="file" accept=".csv" required></label>
+            <label class="check"><input type="checkbox" name="commit"> Commit to the database</label>
+            <button class="btn primary" type="submit">Run pipeline</button>
+          </form>
+          <p id="commit-note" class="muted small"></p>
+        </article>
+        <article class="card">
+          <header><h3>Try it with a messy sample batch</h3><p>Generated from live keys: the next days of business, with duplicates, bad dates, unknown references, outliers and more deliberately added</p></header>
+          <div id="sample-files" class="sample-files"></div>
+          <div class="row-actions">
+            <button id="sample-run" class="btn primary small">Run the whole batch</button>
+            <button id="sample-refresh" class="btn small">Regenerate</button>
+          </div>
+        </article>
+        <article class="card span-2" id="run-result-card" hidden>
+          <header><h3 id="run-result-title">Data-quality report</h3><p id="run-result-meta"></p></header>
+          <div id="run-result"></div>
+        </article>
+        <article class="card span-2">
+          <header><h3>Pipeline runs</h3><p>Every run is audited in <code>etl_runs</code> / <code>etl_issues</code>. Click a run to see its issues.</p></header>
+          <div class="table-wrap"><table id="table-runs" class="clickable"></table></div>
+        </article>
+      </div>
+    </section>
+
     <!-- ADMIN -->
     <section data-panel="admin" class="panel" hidden>
       <div class="grid">
@@ -174,9 +297,17 @@
           <div class="table-wrap"><table id="table-users"></table></div>
         </article>
         <article class="card">
-          <header><h3>Analytics cache</h3><p>Results are cached per query and region, so the serverless database can sleep between visits.</p></header>
-          <button id="clear-cache" class="btn">Clear cache</button>
+          <header><h3>Operations</h3><p>Jobs normally run on a schedule; these buttons run them now.</p></header>
+          <div class="admin-actions">
+            <button id="clear-cache" class="btn">Clear analytics cache</button>
+            <button id="run-segments" class="btn">Re-run customer segmentation</button>
+            <button id="reindex-docs" class="btn">Re-index policy documents</button>
+          </div>
           <p id="cache-status" class="muted small" role="status"></p>
+        </article>
+        <article class="card">
+          <header><h3>Data &amp; AI service</h3><p>Status of the Python service (FastAPI)</p></header>
+          <div id="service-status" class="mini-stats"></div>
         </article>
       </div>
     </section>

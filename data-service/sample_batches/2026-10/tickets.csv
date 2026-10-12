@@ -1,0 +1,129 @@
+ticket_id,customer_email,order_id,assignee,issue_type,priority,status,created_at,closed_at
+TKT-B2610-00001,aarav.qureshi.261051@example.com,ORD-B2610-00204,EMP-0123,refund,MEDIUM,closed,2026-10-08 12:52,2026-10-11 05:56
+TKT-B2610-00002,amit.singh7306@example.com,ORD-B2610-01020,EMP-0122,Delivery,medium,closed,2026-10-07 02:25,2026-10-08 01:02
+TKT-B2610-00003,kavya.chauhan1981@example.com,ORD-B2610-00164,EMP-0092,refund,medium,Resolved,2026-10-08 05:12,2026-10-08 20:10
+TKT-B2610-00004,rohan.shah7988@example.com,ORD-B2610-01024,EMP-0119,Delivery,high,closed,2026-10-02 06:14,2026-10-02 18:41
+TKT-B2610-00005,sana.naidu.261035@example.com,ORD-B2610-00314,EMP-0083,Delivery,High,Resolved,2026-10-08 01:43,2026-10-08 11:23
+TKT-B2610-00006,kavya.rao3913@example.com,ORD-B2610-00690,EMP-0073,Account,Medium,Resolved,2026-10-01 14:19,2026-10-02 02:57
+TKT-B2610-00007,mira.mehta4469@example.com,ORD-B2610-00477,EMP-0106,Billing,high,closed,2026-10-09 17:10,2026-10-10 15:21
+TKT-B2610-00008,siddharth.chatterjee1589@example.com,ORD-B2610-00804,EMP-0083,Returns,CRITICAL,closed,2026-10-04 10:32,2026-10-04 14:00
+TKT-B2610-00009,saanvi.iyer4011@example.com,ORD-B2610-00366,EMP-0088,Billing,High,In Progress,2026-10-01 15:21,
+TKT-B2610-00010,vivaan.menon7445@example.com,ORD-B2610-00648,EMP-0077,Billing,Low,Resolved,2026-10-06 20:28,2026-10-10 05:18
+TKT-B2610-00011,yash.oberoi.261068@example.com,ORD-B2610-00345,EMP-0112,Delivery,Medium,closed,2026-10-09 22:53,2026-10-11 10:31
+TKT-B2610-00012,pooja.reddy4548@example.com,ORD-B2610-00161,EMP-0082,Billing,medium,closed,2026-10-03 02:29,2026-10-04 14:53
+TKT-B2610-00013,pooja.rao3144@example.com,ORD-B2610-00506,EMP-0101,refund,MEDIUM,closed,2026-10-07 12:56,2026-10-09 18:17
+TKT-B2610-00014,imran.menon6052@example.com,ORD-B2610-00693,EMP-0095,refund,CRITICAL,Resolved,2026-10-10 15:38,2026-10-11 01:05
+TKT-B2610-00015,nandini.luthra.261044@example.com,ORD-B2610-00843,EMP-0119,Product Defect,low,Open,2026-10-06 23:49,
+TKT-B2610-00016,kiara.sethi.261033@example.com,ORD-B2610-00543,EMP-0094,refund,LOW,closed,2026-10-04 08:01,2026-10-06 03:54
+TKT-B2610-00017,gurpreet.mehta6468@example.com,ORD-B2610-00683,EMP-0084,Delivery,HIGH,closed,2026-10-02 17:34,2026-10-02 21:56
+TKT-B2610-00018,saanvi.pandey5282@example.com,ORD-B2610-00158,EMP-0114,Returns,low,In Progress,2026-10-11 03:35,
+TKT-B2610-00019,pallavi.chopra.261074@example.com,ORD-B2610-00219,EMP-0080,Returns,LOW,Open,2026-10-11 18:31,
+TKT-B2610-00020,harpreet.gupta1190@example.com,ORD-B2610-00114,EMP-0091,Billing,High,Resolved,2026-10-10 12:43,2026-10-11 06:12
+TKT-B2610-00021,mira.menon6975@example.com,ORD-B2610-00886,EMP-0085,Delivery,Low,closed,2026-10-09 10:08,2026-10-11 13:31
+TKT-B2610-00022,jhanvi.dutta.2610126@example.com,ORD-B2610-00570,EMP-0073,Delivery,Medium,closed,2026-10-05 07:32,2026-10-07 06:22
+TKT-B2610-00023,vihaan.yadav.261055@example.com,ORD-B2610-00375,EMP-0080,Delivery,MEDIUM,Resolved,2026-10-05 17:29,2026-10-08 20:30
+TKT-B2610-00024,jhanvi.prasad.261078@example.com,ORD-B2610-00327,EMP-0118,Delivery,HIGH,closed,2026-10-03 17:21,2026-10-03 22:38
+TKT-B2610-00025,diya.rao434@example.com,ORD-B2610-00006,EMP-0086,Delivery,HIGH,Resolved,2026-10-08 23:21,2026-10-09 10:28
+TKT-B2610-00026,kabir.chatterjee1580@example.com,ORD-B2610-00276,EMP-0109,Billing,High,closed,2026-10-02 22:58,2026-10-04 06:09
+TKT-B2610-00027,om.vora.261083@example.com,ORD-B2610-00745,EMP-0076,shipping,High,Resolved,2026-10-03 22:56,2026-10-04 07:44
+TKT-B2610-00028,mira.pandey1081@example.com,ORD-B2610-00526,EMP-0089,Delivery,LOW,Resolved,2026-10-02 07:45,2026-10-06 10:41
+TKT-B2610-00029,aarav.chopra.261015@example.com,ORD-B2610-00959,EMP-0083,Billing,HIGH,Resolved,2026-10-05 00:33,2026-10-06 16:01
+TKT-B2610-00030,krishna.rao6710@example.com,ORD-B2610-00373,EMP-0090,Delivery,High,Resolved,2026-10-06 08:06,2026-10-06 16:35
+TKT-B2610-00031,rohit.naidu.261097@example.com,ORD-B2610-00176,EMP-0080,Billing,MEDIUM,Resolved,2026-10-11 08:30,2026-10-11 18:30
+TKT-B2610-00032,meera.sharma5007@example.com,ORD-B2610-00803,EMP-0107,Product Defect,Low,closed,2026-10-01 02:24,2026-10-05 06:21
+TKT-B2610-00033,rohan.pillai4058@example.com,ORD-B2610-00711,EMP-0110,Delivery,High,Resolved,2026-10-02 22:50,2026-10-04 12:42
+TKT-B2610-00034,mira.banerjee3827@example.com,ORD-B2610-00901,EMP-0078,Billing,Medium,closed,2026-10-03 08:30,2026-10-04 14:21
+TKT-B2610-00035,arnav.bose2276@example.com,ORD-B2610-00653,EMP-0085,Billing,Medium,closed,2026-10-03 01:17,2026-10-06 00:58
+TKT-B2610-00036,anjali.menon5796@example.com,ORD-B2610-00483,EMP-0084,Product Defect,High,closed,2026-10-01 03:42,2026-10-01 07:19
+TKT-B2610-00037,isha.joshi3138@example.com,ORD-B2610-00351,EMP-0093,shipping,LOW,closed,2026-10-08 17:42,2026-10-09 05:06
+TKT-B2610-00038,rohan.mishra7821@example.com,ORD-B2610-00712,EMP-0079,Delivery,LOW,closed,2026-10-05 05:41,2026-10-05 20:11
+TKT-B2610-00039,aditya.nair4392@example.com,ORD-B2610-00075,EMP-0073,Returns,LOW,Resolved,2026-10-08 06:08,2026-10-11 04:47
+TKT-B2610-00040,deepak.nair7642@example.com,ORD-B2610-00099,EMP-0088,Product Defect,Low,closed,2026-10-07 07:42,2026-10-11 06:43
+TKT-B2610-00041,mira.patel2116@example.com,,EMP-0114,Product Defect,Medium,Resolved,2026-10-10 00:44,2026-10-10 08:25
+TKT-B2610-00042,pooja.rao7560@example.com,,EMP-0082,Account,low,closed,2026-10-07 22:14,2026-10-10 02:41
+TKT-B2610-00043,aditya.khan3817@example.com,,EMP-0076,Billing,medium,closed,2026-10-07 21:00,2026-10-08 04:46
+TKT-B2610-00044,swati.patel6916@example.com,,EMP-0091,Billing,Critical,closed,2026-10-07 10:39,2026-10-07 16:16
+TKT-B2610-00045,aisha.nair4397@example.com,,EMP-0074,Product Defect,Low,closed,2026-10-03 05:20,2026-10-04 12:36
+TKT-B2610-00046,vikram.shah5709@example.com,,EMP-0116,Billing,low,closed,2026-10-07 05:40,2026-10-11 19:05
+TKT-B2610-00047,aisha.iyer2233@example.com,,EMP-0074,shipping,medium,Resolved,2026-10-05 15:26,2026-10-06 13:41
+TKT-B2610-00048,amit.kaur417@example.com,,EMP-0116,Product Defect,Medium,In Progress,2026-10-10 20:09,
+TKT-B2610-00049,shreya.rao3555@example.com,,EMP-0103,Delivery,HIGH,closed,2026-10-10 08:38,2026-10-10 19:29
+TKT-B2610-00050,suresh.gupta4419@example.com,,EMP-0079,Account,MEDIUM,Resolved,2026-10-07 10:38,2026-10-09 00:15
+TKT-B2610-00051,ananya.kapoor4900@example.com,,EMP-0098,Delivery,Medium,Resolved,2026-10-05 15:27,2026-10-08 16:06
+TKT-B2610-00052,nikhil.verma5204@example.com,,EMP-0077,Delivery,low,Resolved,2026-10-01 05:36,2026-10-05 03:13
+TKT-B2610-00053,sara.reddy5042@example.com,,EMP-0084,Billing,LOW,closed,2026-10-03 11:50,2026-10-04 04:37
+TKT-B2610-00054,swati.das5727@example.com,,EMP-0085,Billing,HIGH,closed,2026-10-07 07:59,2026-10-07 12:09
+TKT-B2610-00055,siddharth.khan2457@example.com,,EMP-0110,Returns,MEDIUM,closed,2026-10-03 15:56,2026-10-04 05:25
+TKT-B2610-00056,harpreet.iyer6446@example.com,,EMP-0109,Billing,Low,Resolved,2026-10-10 01:37,2026-10-11 23:20
+TKT-B2610-00057,swati.pandey5417@example.com,,EMP-0102,Billing,Medium,Resolved,2026-10-10 23:01,2026-10-11 15:32
+TKT-B2610-00058,varun.shah1301@example.com,,EMP-0107,Delivery,high,Open,2026-10-10 07:49,
+TKT-B2610-00059,gurpreet.shah972@example.com,,EMP-0099,Delivery,Medium,Resolved,2026-10-07 14:31,2026-10-09 15:08
+TKT-B2610-00060,arnav.singh3050@example.com,,EMP-0080,Delivery,LOW,Resolved,2026-10-05 01:49,2026-10-05 14:18
+TKT-B2610-00061,vivaan.deshpande6574@example.com,,EMP-0107,Delivery,medium,Resolved,2026-10-07 07:15,2026-10-09 21:36
+TKT-B2610-00062,suresh.bhatt2316@example.com,,EMP-0122,Billing,medium,Resolved,2026-10-08 08:44,2026-10-11 12:29
+TKT-B2610-00063,aisha.kaur711@example.com,,EMP-0088,Product Defect,MEDIUM,closed,2026-10-02 05:42,2026-10-04 13:35
+TKT-B2610-00064,nisha.gupta3198@example.com,,EMP-0101,Delivery,Critical,Resolved,2026-10-01 04:15,2026-10-01 06:25
+TKT-B2610-00065,vivaan.reddy4583@example.com,,EMP-0083,Billing,low,In Progress,2026-10-11 23:10,
+TKT-B2610-00066,manoj.bhatt1451@example.com,,EMP-0089,Product Defect,medium,closed,2026-10-07 15:59,2026-10-08 10:16
+TKT-B2610-00067,mira.banerjee7663@example.com,,EMP-0110,Billing,Medium,Resolved,2026-10-03 06:19,2026-10-04 16:25
+TKT-B2610-00068,vikram.chatterjee5004@example.com,,EMP-0112,Account,LOW,In Progress,2026-10-10 01:40,
+TKT-B2610-00069,vivaan.bhatt7824@example.com,,EMP-0077,Returns,MEDIUM,Resolved,2026-10-02 15:39,2026-10-04 21:57
+TKT-B2610-00070,aadhya.bhatt4798@example.com,,EMP-0106,Delivery,Low,Open,2026-10-10 09:23,
+TKT-B2610-00071,tanvi.agarwal7014@example.com,,EMP-0105,refund,medium,closed,2026-10-03 03:45,2026-10-05 22:03
+TKT-B2610-00072,harpreet.das1176@example.com,,EMP-0103,Product Defect,Low,Resolved,2026-10-03 21:22,2026-10-05 07:13
+TKT-B2610-00073,sneha.mehta680@example.com,,EMP-0096,Delivery,LOW,In Progress,2026-10-10 23:10,
+TKT-B2610-00074,saanvi.bose566@example.com,,EMP-0109,Billing,medium,closed,2026-10-06 15:54,2026-10-07 00:19
+TKT-B2610-00075,meera.gupta7600@example.com,,EMP-0097,Product Defect,High,Resolved,2026-10-06 15:23,2026-10-08 06:37
+TKT-B2610-00076,rohan.joshi111@example.com,,EMP-0111,Product Defect,CRITICAL,Resolved,2026-10-08 22:28,2026-10-09 03:03
+TKT-B2610-00077,karan.das2899@example.com,,EMP-0098,Billing,HIGH,closed,2026-10-06 16:21,2026-10-07 13:11
+TKT-B2610-00078,nisha.iyer7923@example.com,,EMP-0095,Returns,Low,Resolved,2026-10-07 19:26,2026-10-11 13:02
+TKT-B2610-00079,varun.sharma117@example.com,,EMP-0120,Delivery,high,In Progress,2026-10-11 10:59,
+TKT-B2610-00080,zoya.kapoor1226@example.com,,EMP-0122,Billing,LOW,Resolved,2026-10-07 08:43,2026-10-09 12:31
+TKT-B2610-00081,nisha.shah788@example.com,,EMP-0120,Returns,Medium,closed,2026-10-02 10:18,2026-10-05 13:01
+TKT-B2610-00082,dev.shah5323@example.com,,EMP-0074,Delivery,MEDIUM,closed,2026-10-09 11:07,2026-10-10 08:21
+TKT-B2610-00083,pooja.shah1181@example.com,,EMP-0083,Product Defect,LOW,closed,2026-10-02 10:08,2026-10-06 18:48
+TKT-B2610-00084,neha.patel574@example.com,,EMP-0096,Returns,LOW,Open,2026-10-11 18:46,
+TKT-B2610-00085,kabir.verma3720@example.com,,EMP-0094,Billing,medium,closed,2026-10-10 17:14,2026-10-11 15:08
+TKT-B2610-00086,suresh.nair1424@example.com,,EMP-0082,Product Defect,low,closed,2026-10-02 06:22,2026-10-06 12:33
+TKT-B2610-00087,vikram.shah2731@example.com,,EMP-0123,Product Defect,high,closed,2026-10-06 14:02,2026-10-07 20:32
+TKT-B2610-00088,suresh.chatterjee5608@example.com,,EMP-0083,Delivery,MEDIUM,Resolved,2026-10-06 16:11,2026-10-07 00:58
+TKT-B2610-00089,farhan.singh6905@example.com,,EMP-0115,Product Defect,high,Resolved,2026-10-07 02:48,2026-10-07 06:34
+TKT-B2610-00090,zoya.das1770@example.com,,EMP-0078,Product Defect,High,closed,2026-10-03 01:35,2026-10-04 10:45
+TKT-B2610-00091,vikram.bhatt829@example.com,,EMP-0085,shipping,High,Resolved,2026-10-07 09:43,2026-10-08 10:21
+TKT-B2610-00092,shreya.kulkarni6717@example.com,,EMP-0110,Delivery,Low,In Progress,2026-10-10 04:15,
+TKT-B2610-00093,amit.das690@example.com,,EMP-0113,Returns,Medium,Resolved,2026-10-06 15:03,2026-10-09 07:51
+TKT-B2610-00094,amit.reddy6048@example.com,,EMP-0093,Returns,Low,In Progress,2026-10-01 03:10,
+TKT-B2610-00095,ishaan.chatterjee7442@example.com,,EMP-0088,Product Defect,MEDIUM,closed,2026-10-08 16:09,2026-10-11 11:47
+TKT-B2610-00096,priya.banerjee3255@example.com,,EMP-0115,Product Defect,medium,Open,2026-10-10 13:17,
+TKT-B2610-00097,kabir.kulkarni7618@example.com,,EMP-0085,Delivery,LOW,Resolved,2026-10-08 10:09,2026-10-08 21:33
+TKT-B2610-00098,varun.rao2594@example.com,,EMP-0101,Returns,Low,Resolved,2026-10-06 12:14,2026-10-09 17:57
+TKT-B2610-00099,manoj.saxena1743@example.com,,EMP-0078,Billing,high,closed,2026-10-09 02:24,2026-10-10 05:01
+TKT-B2610-00100,ananya.saxena7639@example.com,,EMP-0095,Billing,Low,Open,2026-10-11 21:35,
+TKT-B2610-00101,tanvi.kulkarni165@example.com,,EMP-0122,Delivery,medium,closed,2026-10-08 19:09,2026-10-11 15:05
+TKT-B2610-00102,kabir.patel6558@example.com,,EMP-0121,Delivery,medium,Resolved,2026-10-06 18:22,2026-10-07 21:06
+TKT-B2610-00103,harpreet.iyer7587@example.com,,EMP-0084,Billing,LOW,closed,2026-10-10 07:33,2026-10-10 18:35
+TKT-B2610-00104,tara.shah1505@example.com,,EMP-0121,Delivery,LOW,In Progress,2026-10-08 23:10,
+TKT-B2610-00105,vikram.chatterjee5004@example.com,,EMP-0095,Billing,Low,Resolved,2026-10-07 04:39,2026-10-11 20:50
+TKT-B2610-00106,pooja.kulkarni6428@example.com,,EMP-0073,shipping,low,Resolved,2026-10-04 08:17,2026-10-06 16:33
+TKT-B2610-00107,imran.pillai3744@example.com,,EMP-0124,Delivery,medium,Resolved,2026-10-05 13:51,2026-10-05 22:56
+TKT-B2610-00108,rahul.kaur523@example.com,,EMP-0083,Delivery,CRITICAL,closed,2026-10-09 02:06,2026-10-09 06:48
+TKT-B2610-00109,amit.agarwal7119@example.com,,EMP-0100,Product Defect,medium,Resolved,2026-10-01 18:40,2026-10-03 19:56
+TKT-B2610-00110,riya.shah2787@example.com,,EMP-0106,Billing,low,closed,2026-10-10 03:26,2026-10-10 22:50
+TKT-B2610-00111,farhan.deshpande5216@example.com,,EMP-0113,Product Defect,low,closed,2026-10-02 06:47,2026-10-02 20:06
+TKT-B2610-00112,sneha.bhatt5695@example.com,,EMP-0108,Delivery,medium,Open,2026-10-09 09:08,
+TKT-B2610-00113,neha.verma6279@example.com,,EMP-0103,Delivery,high,closed,2026-10-08 16:20,2026-10-08 21:09
+TKT-B2610-00114,deepak.sharma6718@example.com,,EMP-0113,Returns,low,In Progress,2026-10-11 23:16,
+TKT-B2610-00115,ananya.chatterjee4666@example.com,,EMP-0075,Delivery,Low,closed,2026-10-01 22:00,2026-10-02 16:34
+TKT-B2610-00116,manoj.nair1804@example.com,,EMP-0116,Product Defect,CRITICAL,Resolved,2026-10-02 04:35,2026-10-02 07:46
+TKT-B2610-00117,harpreet.mishra5391@example.com,,EMP-0083,Account,Medium,Resolved,2026-10-05 20:12,2026-10-08 07:30
+TKT-B2610-00118,imran.mehta4956@example.com,,EMP-0087,Billing,LOW,Resolved,2026-10-09 05:23,2026-10-11 12:54
+TKT-B2610-00119,saanvi.kapoor6941@example.com,,EMP-0106,Account,High,closed,2026-10-01 15:16,2026-10-03 02:42
+TKT-B2610-00120,tanvi.banerjee5237@example.com,,EMP-0089,Returns,medium,closed,2026-10-02 16:47,2026-10-03 11:30
+TKT-B2610-00121,sneha.joshi2733@example.com,,EMP-0107,Account,Medium,closed,2026-10-01 12:48,2026-10-04 17:19
+TKT-B2610-00122,diya.kaur2621@example.com,,EMP-0100,Delivery,critical,closed,2026-10-10 22:57,2026-10-11 08:42
+TKT-B2610-00123,diya.pandey6532@example.com,,EMP-0110,Returns,MEDIUM,Resolved,2026-10-02 17:14,2026-10-04 10:07
+TKT-B2610-00124,amit.malhotra7113@example.com,,EMP-0082,Product Defect,critical,closed,2026-10-07 13:57,2026-10-07 14:51
+TKT-B2610-00125,aarav.khan3965@example.com,,EMP-0112,Delivery,Medium,closed,2026-10-05 08:56,2026-10-07 08:02
+TKT-B2610-99001,zoya.iyer1978@example.com,,EMP-0073,Billing,HIGH,Resolved,2026-10-02 06:00,2026-10-02 01:00
+TKT-B2610-99002,suresh.pandey1585@example.com,,EMP-0074,,LOW,Open,2026-10-02 06:00,
+TKT-B2610-99003,pooja.sharma1253@example.com,ORD-NOPE-0001,EMP-0000,Delivery,MEDIUM,Resolved,2026-10-02 06:00,2026-10-03 02:00

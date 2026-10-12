@@ -33,12 +33,32 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
+  cache:
+    type: caffeine
+    cache-names: analytics
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=6h
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 app:
   jwt:
     secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
     ttl-minutes: ${JWT_TTL_MINUTES:480}
   demo-password: ${DEMO_PASSWORD:demo123}
+  owner:                             # private ADMIN account that may commit data changes (optional)
+    username: ${OWNER_USERNAME:}
+    password: ${OWNER_PASSWORD:}
+  data-service:                      # Python data & AI service (Phases 2-4); empty = features disabled
+    url: ${DATA_SERVICE_URL:}
+    token: ${INTERNAL_API_TOKEN:}
+    connect-timeout: 15s
+    read-timeout: 150s
+  ai:
+    demo-requests-per-hour: ${AI_DEMO_REQUESTS_PER_HOUR:15}
+    owner-requests-per-hour: ${AI_OWNER_REQUESTS_PER_HOUR:200}
 
 logging:
   level:

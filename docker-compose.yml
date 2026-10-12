@@ -1,17 +1,24 @@
-# Local full stack: docker compose up --build  ->  http://localhost:8080
+# Full stack locally:   docker compose up --build   ->  http://localhost:8080
+# Optional AI:          LLM_API_KEY=your-key docker compose up --build
+#
+#   db            PostgreSQL 16 + pgvector
+#   backend       Spring Boot API + dashboard (runs the Flyway migrations on start)
+#   data-service  Python FastAPI: ETL, ML segmentation, AI analyst, RAG, insights
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: eap
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d eap"]
       interval: 3s
-      retries: 20
-  app:
+      retries: 30
+
+  backend:
     build: .
     depends_on:
       db:
@@ -21,4 +28,28 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       JWT_SECRET: local-docker-secret-change-me-0123456789
+      OWNER_USERNAME: owner
+      OWNER_PASSWORD: owner-password-local
+      DATA_SERVICE_URL: http://data-service:8000
+      INTERNAL_API_TOKEN: local-internal-token
     ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 5s
+      retries: 40
+      start_period: 20s
+
+  data-service:
+    build: ./data-service
+    depends_on:
+      backend:
+        condition: service_healthy     # schema comes from the backend's Flyway migrations
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/eap
+      INTERNAL_API_TOKEN: local-internal-token
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      PUBLIC_APP_URL: http://localhost:8080
+    ports: ["8000:8000"]
+
+volumes:
+  pgdata:

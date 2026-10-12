@@ -1,5 +1,8 @@
 # Deploying for free: Neon (Postgres) + Render (app)
 
+> **Already deployed Phase 1?** Continue with **[SETUP-PHASES-2-4.md](SETUP-PHASES-2-4.md)** to add the data & AI service,
+> the AI key, the owner account, the daily e-mail report and Power BI. This page covers the first deployment.
+
 Allow about 20 minutes. Both services have free plans. Neon does not need a card. Render's free web service normally doesn't either, but Render may ask for card verification on some accounts.
 
 ```

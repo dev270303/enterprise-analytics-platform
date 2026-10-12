@@ -26,14 +26,19 @@ public class AppUser {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /** Public demo accounts can explore everything but cannot change shared data. */
+    @Column(nullable = false)
+    private boolean demo = true;
+
     protected AppUser() {
     }
 
-    public AppUser(String username, String passwordHash, String displayName, Role role) {
+    public AppUser(String username, String passwordHash, String displayName, Role role, boolean demo) {
         this.username = username;
         this.passwordHash = passwordHash;
         this.displayName = displayName;
         this.role = role;
+        this.demo = demo;
     }
 
     public Integer getId() { return id; }
@@ -42,4 +47,9 @@ public class AppUser {
     public String getDisplayName() { return displayName; }
     public Role getRole() { return role; }
     public boolean isEnabled() { return enabled; }
+    public boolean isDemo() { return demo; }
+
+    public void changePassword(String newHash) { this.passwordHash = newHash; }
+    public void changeRole(Role newRole) { this.role = newRole; }
+    public void markDemo(boolean value) { this.demo = value; }
 }

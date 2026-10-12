@@ -85,7 +85,21 @@ public class AnalyticsController {
         return analytics.query("segment_summary", validRegion(region));
     }
 
-    // ---- Support --------------------------------------------------------------------------
+    @GetMapping("/analytics/rfm-segments")
+    public Map<String, Object> rfmSegments(@RequestParam(required = false) String region) {
+        String r = validRegion(region);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("segments", analytics.query("rfm_segments", r));
+        body.put("watchlist", analytics.query("churn_watchlist", r));
+        return body;
+    }
+
+    // ---- Support (every role, including EMPLOYEE) ------------------------------------------
+
+    @GetMapping("/analytics/support/summary")
+    public Map<String, Object> supportSummary() {
+        return first(analytics.query("support_kpis", null));
+    }
 
     @GetMapping("/analytics/support/sla")
     public List<Map<String, Object>> ticketSla() {

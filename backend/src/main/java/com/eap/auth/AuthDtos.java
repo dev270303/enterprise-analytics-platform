@@ -12,6 +12,7 @@ public final class AuthDtos {
             @NotBlank @Size(max = 100) String password) {
     }
 
-    public record LoginResponse(String token, long expiresInSeconds, String username, String displayName, Role role) {
+    public record LoginResponse(String token, long expiresInSeconds, String username, String displayName,
+                                Role role, boolean demo) {
     }
 }
