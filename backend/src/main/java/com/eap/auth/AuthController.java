@@ -31,6 +31,6 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
 
         return new LoginResponse(tokens.issue(user), tokens.ttlSeconds(),
-                user.getUsername(), user.getDisplayName(), user.getRole());
+                user.getUsername(), user.getDisplayName(), user.getRole(), user.isDemo());
     }
 }

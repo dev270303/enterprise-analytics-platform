@@ -89,6 +89,63 @@ class ApiIntegrationTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + login("admin")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(4)));
+    }
+
+    @Test
+    void employeeSeesSupportButNotRevenue() throws Exception {
+        String token = login("employee");
+        mvc.perform(get("/api/analytics/support/summary").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.open_tickets").isNumber());
+        mvc.perform(get("/api/analytics/support/sla").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/dashboard/summary").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/ai/ask").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"question\":\"revenue?\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void loginTellsTheClientItIsADemoAccount() throws Exception {
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"analyst\",\"password\":\"demo123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.demo").value(true))
+                .andExpect(jsonPath("$.role").value("ANALYST"));
+    }
+
+    @Test
+    void recordListsArePaginated() throws Exception {
+        String token = login("analyst");
+        mvc.perform(get("/api/orders?status=delivered&region=South&size=5").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.content[0].region").value("South"))
+                .andExpect(jsonPath("$.totalElements").isNumber());
+        mvc.perform(get("/api/customers?segment=Enterprise&size=3").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].segment").value("Enterprise"));
+    }
+
+    @Test
+    void phaseTwoToFourEndpointsWork() throws Exception {
+        String token = login("analyst");
+        mvc.perform(get("/api/data/runs").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(get("/api/insights").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(get("/api/analytics/rfm-segments").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.segments").isArray());
+        // no data service configured in this test context -> friendly 503, not a crash
+        mvc.perform(post("/api/ai/ask").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"question\":\"Revenue by region\"}"))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(get("/api/ai/status").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.configured").value(false));
+        // analysts can read data-quality reports but not load data
+        mvc.perform(post("/api/data/samples/run").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
     }
 }

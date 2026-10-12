@@ -31,6 +31,7 @@ public class TokenService {
                 .subject(user.getUsername())
                 .claim("role", user.getRole().name())
                 .claim("name", user.getDisplayName())
+                .claim("demo", user.isDemo())
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

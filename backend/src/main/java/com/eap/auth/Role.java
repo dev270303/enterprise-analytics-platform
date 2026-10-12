@@ -1,7 +1,8 @@
 package com.eap.auth;
 
 public enum Role {
-    ADMIN,    // everything, including user management
-    ANALYST,  // dashboards + the SQL behind every chart
-    MANAGER   // dashboards only
+    ADMIN,     // everything: data uploads, user management, cache, scheduled jobs
+    ANALYST,   // dashboards + SQL behind every chart + AI analyst + data-quality reports
+    MANAGER,   // dashboards + AI analyst + insights
+    EMPLOYEE   // operational support data only (no revenue figures)
 }

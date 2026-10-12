@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -41,7 +42,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/health").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/**").authenticated()
+                // data ingestion: ADMIN can load, ANALYST can read the data-quality reports
+                .requestMatchers(HttpMethod.POST, "/api/data/**").hasRole("ADMIN")
+                .requestMatchers("/api/data/**").hasAnyRole("ADMIN", "ANALYST")
+                // operational data every signed-in role (including EMPLOYEE) may see
+                .requestMatchers("/api/analytics/support/**", "/api/products", "/api/products/**").authenticated()
+                // everything else (revenue analytics, customers, orders, AI analyst, insights)
+                .requestMatchers("/api/**").hasAnyRole("ADMIN", "ANALYST", "MANAGER")
                 .anyRequest().permitAll())                      // static dashboard files
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
