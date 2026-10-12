@@ -1,13 +1,19 @@
-# Render Blueprint: New > Blueprint > select this repo.
+# Render Blueprint (Infrastructure as Code): Dashboard > Blueprints > select this repo > Sync.
+# Two free web services in Singapore (pair them with a Neon project in AWS Singapore).
+# autoDeployTrigger: checksPass  ->  Render deploys a commit on main only after GitHub Actions CI is green.
 services:
+  # ---------------------------------------------------------------- Java backend + dashboard
   - type: web
     name: enterprise-analytics
     runtime: docker
     plan: free
-    region: singapore            # closest Render region to India; pair with a Neon project in AWS Singapore
+    region: singapore
     dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths: ["backend/**", "Dockerfile", ".dockerignore"]
     envVars:
       - key: DB_URL              # jdbc:postgresql://<neon-host>/<db>?sslmode=require
         sync: false
@@ -16,6 +22,47 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: JWT_SECRET
-        generateValue: true      # Render generates a random secret
+        generateValue: true
       - key: DEMO_PASSWORD
         value: demo123
+      - key: OWNER_USERNAME      # your private admin login that can commit data loads (optional)
+        sync: false
+      - key: OWNER_PASSWORD      # at least 10 characters
+        sync: false
+      - key: DATA_SERVICE_URL    # https://<your-ai-service>.onrender.com
+        sync: false
+      - key: INTERNAL_API_TOKEN  # shared secret between the two services
+        generateValue: true
+
+  # ---------------------------------------------------------------- Python data & AI service
+  - type: web
+    name: enterprise-analytics-ai
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./data-service/Dockerfile
+    dockerContext: ./data-service
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths: ["data-service/**"]
+    envVars:
+      - key: DATABASE_URL        # Neon connection string as-is: postgresql://user:pass@host/db?sslmode=require
+        sync: false
+      - key: INTERNAL_API_TOKEN
+        fromService:
+          type: web
+          name: enterprise-analytics
+          envVarKey: INTERNAL_API_TOKEN
+      - key: LLM_API_KEY         # e.g. a free Google AI Studio (Gemini) key
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LLM_MODEL
+        value: gemini-3.6-flash
+      - key: EMBEDDING_MODEL
+        value: gemini-embedding-2
+      - key: AI_DAILY_LIMIT
+        value: "300"
+      - key: PUBLIC_APP_URL
+        value: https://enterprise-analytics.onrender.com

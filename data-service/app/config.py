@@ -27,10 +27,10 @@ class Settings:
     # Any OpenAI-compatible chat/embeddings API (Gemini, Groq, OpenRouter, OpenAI, local Ollama ...)
     llm_base_url: str = field(default_factory=lambda: _env("LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"))
     llm_api_key: str | None = field(default_factory=lambda: _env("LLM_API_KEY"))
-    llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", "gemini-2.5-flash"))
+    llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", "gemini-3.6-flash"))
     embedding_base_url: str | None = field(default_factory=lambda: _env("EMBEDDING_BASE_URL"))  # defaults to llm_base_url
     embedding_api_key: str | None = field(default_factory=lambda: _env("EMBEDDING_API_KEY"))    # defaults to llm_api_key
-    embedding_model: str | None = field(default_factory=lambda: _env("EMBEDDING_MODEL", "gemini-embedding-001"))
+    embedding_model: str | None = field(default_factory=lambda: _env("EMBEDDING_MODEL", "gemini-embedding-2"))
     embedding_dim: int = 768  # fixed by the rag_chunks.embedding column
 
     ai_daily_limit: int = field(default_factory=lambda: _int("AI_DAILY_LIMIT", 300))

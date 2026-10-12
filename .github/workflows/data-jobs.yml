@@ -1,0 +1,43 @@
+name: Data jobs (manual)
+
+# Run maintenance jobs against the production database from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run"
+        type: choice
+        options:
+          - etl-sample-dry-run       # generate a messy batch for the next days and validate it (no writes)
+          - etl-sample-commit        # ...and load it (moves the dashboards forward in time)
+          - segments                 # refresh RFM / K-Means customer segments
+          - reindex-documents        # re-index the policy documents for the AI assistant
+        default: etl-sample-dry-run
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+    defaults:
+      run:
+        working-directory: data-service
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: data-service/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Run ${{ inputs.job }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::Set the DATABASE_URL repository secret first"; exit 1; }
+          case "${{ inputs.job }}" in
+            etl-sample-dry-run) python -m app.etl generate --out /tmp/batch && python -m app.etl run /tmp/batch/*.csv --source scheduler ;;
+            etl-sample-commit)  python -m app.etl generate --out /tmp/batch && python -m app.etl run /tmp/batch/*.csv --source scheduler --commit ;;
+            segments)           python -m app.analysis ;;
+            reindex-documents)  python -c "from app.ai.rag import ingest_knowledge_base as i; import json; print(json.dumps(i(), indent=2))" ;;
+          esac
