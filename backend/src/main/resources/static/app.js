@@ -12,6 +12,13 @@
     cache: new Map(),    // api path -> response JSON
   };
   const REGION_AWARE = new Set(['overview', 'sales', 'customers']);
+  // Which dashboard tabs each role may open (the server enforces the same rules on every API call)
+  const ROLE_TABS = {
+    ADMIN: ['overview', 'sales', 'customers', 'support', 'ai', 'insights', 'data', 'admin'],
+    ANALYST: ['overview', 'sales', 'customers', 'support', 'ai', 'insights', 'data'],
+    MANAGER: ['overview', 'sales', 'customers', 'support', 'ai', 'insights'],
+    EMPLOYEE: ['support'],
+  };
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -60,26 +67,26 @@
   // ------------------------------------------------------------------ API
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function api(path, { method = 'GET', body, useCache = true } = {}) {
+  async function api(path, { method = 'GET', body, useCache = true, retries = 3, form, raw = false } = {}) {
     if (method === 'GET' && useCache && state.cache.has(path)) return state.cache.get(path);
-    for (let attempt = 0; attempt < 4; attempt++) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const headers = state.token ? { Authorization: 'Bearer ' + state.token } : {};
+      if (!form) headers['Content-Type'] = 'application/json';
       const res = await fetch('api/' + path, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(state.token ? { Authorization: 'Bearer ' + state.token } : {}),
-        },
-        body: body ? JSON.stringify(body) : undefined,
+        headers,
+        body: form || (body ? JSON.stringify(body) : undefined),
       });
       if (res.status === 401 && state.token) { logout('Your session expired. Please sign in again.'); throw new Error('unauthorized'); }
-      if (res.status === 503 && attempt < 3) { await sleep(2500 * (attempt + 1)); continue; } // DB waking up
+      if (res.status === 503 && attempt < retries) { await sleep(2500 * (attempt + 1)); continue; } // DB waking up
       if (!res.ok) {
         let detail = res.statusText;
         try { const j = await res.json(); detail = j.detail || j.message || detail; } catch { /* not JSON */ }
         const err = new Error(detail); err.status = res.status; throw err;
       }
+      if (raw) return res;
       const data = await res.json();
-      if (method === 'GET') state.cache.set(path, data);
+      if (method === 'GET' && useCache) state.cache.set(path, data);
       return data;
     }
     throw new Error('Service unavailable');
@@ -116,7 +123,7 @@
   // ------------------------------------------------------------------ auth
   function saveSession(data) {
     state.token = data.token;
-    state.user = { username: data.username, displayName: data.displayName, role: data.role };
+    state.user = { username: data.username, displayName: data.displayName, role: data.role, demo: data.demo !== false };
     try { sessionStorage.setItem('eap.session', JSON.stringify({ token: data.token, user: state.user, exp: Date.now() + data.expiresInSeconds * 1000 })); } catch { /* storage blocked */ }
   }
 
@@ -161,9 +168,13 @@
     $('#app-view').hidden = false;
     $('#user-name').textContent = state.user.displayName;
     $('#user-role').textContent = state.user.role;
-    $('#admin-tab').hidden = state.user.role !== 'ADMIN';
+    $('#user-owner').hidden = state.user.demo !== false;
+    const allowed = ROLE_TABS[state.user.role] || ['support'];
+    $$('.tabs [role=tab]').forEach((b) => (b.hidden = !allowed.includes(b.dataset.tab)));
     decorateSqlButtons();
-    selectTab('overview');
+    selectTab(allowed[0]);
+    // Wake the free-tier data & AI service in the background so it is ready when needed
+    if (allowed.includes('ai')) api('ai/status', { useCache: false, retries: 0 }).catch(() => {});
   }
 
   function selectTab(tab) {
@@ -180,6 +191,9 @@
       else if (tab === 'sales') await loadSales();
       else if (tab === 'customers') await loadCustomers();
       else if (tab === 'support') await loadSupport();
+      else if (tab === 'ai') await loadAi();
+      else if (tab === 'insights') await loadInsights();
+      else if (tab === 'data') await loadData();
       else if (tab === 'admin') await loadAdmin();
     } catch (e) {
       if (e.message !== 'unauthorized') toast('Could not load data: ' + e.message);
@@ -346,12 +360,14 @@
 
   // ------------------------------------------------------------------ CUSTOMERS
   async function loadCustomers() {
-    const [growth, cohorts, segments, customers] = await Promise.all([
+    const [growth, cohorts, segments, customers, rfm] = await Promise.all([
       api(withRegion('analytics/customer-growth')),
       api(withRegion('analytics/cohorts')),
       api(withRegion('analytics/segments')),
       api(withRegion('analytics/top-customers')),
+      api(withRegion('analytics/rfm-segments')),
     ]);
+    renderRfm(rfm);
 
     const surface = cssVar('--surface');
     drawChart('chart-growth', {
@@ -414,12 +430,12 @@
   // ------------------------------------------------------------------ SUPPORT
   async function loadSupport() {
     const [summary, sla, trend, agents] = await Promise.all([
-      api('dashboard/summary'),
+      api('analytics/support/summary'),
       api('analytics/support/sla'),
       api('analytics/support/trend'),
       api('analytics/support/agents'),
     ]);
-    const t = summary.support;
+    const t = summary;
     $('#support-kpis').innerHTML = [
       kpi('Open tickets', num(t.open_tickets), `<span>${num(t.open_high_priority)} high / critical</span>`),
       kpi('Open & past SLA', num(t.open_overdue), '<span>need escalation</span>'),
@@ -463,8 +479,391 @@
   async function loadAdmin() {
     const users = await api('admin/users', { useCache: false });
     $('#table-users').innerHTML = table(
-      [['ID', 'rank'], 'Username', 'Name', 'Role', 'Enabled'],
-      users.map((u) => [[u.id, 'rank'], `<code>${esc(u.username)}</code>`, esc(u.displayName), `<span class="tag">${esc(u.role)}</span>`, u.enabled ? 'Yes' : 'No']));
+      [['ID', 'rank'], 'Username', 'Name', 'Role', 'Account'],
+      users.map((u) => [[u.id, 'rank'], `<code>${esc(u.username)}</code>`, esc(u.displayName), `<span class="tag">${esc(u.role)}</span>`,
+        u.demo ? 'Public demo' : '<strong>Owner</strong>']));
+    renderServiceStatus($('#service-status'));
+  }
+
+  async function renderServiceStatus(box) {
+    box.innerHTML = '<div class="muted small">Checking the data & AI service… (it may need a minute to wake up)</div>';
+    try {
+      const s = await api('ai/status', { useCache: false, retries: 0 });
+      if (s.configured === false) { box.innerHTML = '<div class="muted small">Not configured on this deployment.</div>'; return; }
+      const yes = (v) => (v ? 'Yes' : 'No');
+      box.innerHTML = `
+        <div><div class="v">${yes(s.database)}</div><div class="l">Database reachable</div></div>
+        <div><div class="v">${s.role_isolation === true ? 'On' : s.role_isolation === false ? 'Off' : '–'}</div><div class="l">ai_reader role isolation</div></div>
+        <div><div class="v">${s.llm_configured ? esc(s.model) : 'None'}</div><div class="l">Language model</div></div>
+        <div><div class="v">${s.documents ?? '–'} / ${s.documents_embedded ?? '–'}</div><div class="l">Docs indexed / embedded</div></div>
+        <div><div class="v">${s.questions_today ?? '–'} / ${s.daily_limit ?? '–'}</div><div class="l">AI questions today / limit</div></div>`;
+    } catch (e) {
+      box.innerHTML = `<div class="muted small">${esc(e.message)}</div>`;
+    }
+  }
+
+  async function adminAction(path, label) {
+    const status = $('#cache-status');
+    status.textContent = label + '…';
+    try {
+      const r = await api(path, { method: 'POST', retries: 0 });
+      state.cache.clear();
+      status.textContent = label + ' done at ' + new Date().toLocaleTimeString('en-IN') +
+        (r && r.k ? ` (k = ${r.k}, silhouette ${r.silhouette}, ${num(r.customers)} customers)` : '') +
+        (Array.isArray(r) ? ` (${r.length} documents)` : '');
+    } catch (e) { status.textContent = label + ' failed: ' + e.message; }
+  }
+
+  // ------------------------------------------------------------------ ML SEGMENTS (Customers tab)
+  function renderRfm(data) {
+    const segs = data.segments || [];
+    if (!segs.length) {
+      $('#rfm-segments').innerHTML = '<p class="muted">Segments have not been computed yet. An admin can run the segmentation job from the Admin tab.</p>';
+      $('#table-churn').innerHTML = '';
+      return;
+    }
+    const computed = segs[0].computed_at ? new Date(segs[0].computed_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+    $('#rfm-segments').innerHTML = `
+      <div class="seg-grid">${segs.map((s) => `
+        <div class="seg">
+          <div class="seg-top"><strong>${esc(s.segment_label)}</strong><span class="muted small">${num(s.customers)} customers</span></div>
+          <div class="seg-bars">
+            <div class="seg-bar"><span class="muted small">Customers</span><div class="bar-track"><div class="bar-fill" style="width:${s.customer_share_pct}%"></div></div><span class="small">${pct(s.customer_share_pct)}</span></div>
+            <div class="seg-bar"><span class="muted small">Revenue</span><div class="bar-track"><div class="bar-fill alt" style="width:${s.value_share_pct}%"></div></div><span class="small">${pct(s.value_share_pct)}</span></div>
+          </div>
+          <div class="muted small">Median ${Math.round(s.median_recency_days)} days since last order · ${Math.round(s.median_orders)} orders · <span class="risk-high">${num(s.high_churn_risk)} high churn risk</span></div>
+        </div>`).join('')}
+      </div>
+      <p class="muted small">Model refreshed ${esc(computed)}</p>`;
+    $('#table-churn').innerHTML = table(
+      ['Customer', 'Segment', 'RFM segment', ['Days since order', 'num'], ['Usual gap', 'num'], ['LTV', 'num']],
+      (data.watchlist || []).map((c) => [`${esc(c.full_name)}<div class="muted small">${esc(c.city)}</div>`, `<span class="tag">${esc(c.segment)}</span>`,
+        esc(c.segment_label), [c.recency_days, 'num'], [c.avg_gap_days ? Math.round(c.avg_gap_days) + 'd' : '–', 'num'], [inr(c.lifetime_value), 'num']]));
+  }
+
+  // ------------------------------------------------------------------ AI ANALYST
+  const AI_EXAMPLES = [
+    'Top 5 products by revenue in Delhi during the last 6 months',
+    'Monthly revenue trend for the West region this year',
+    'Which ticket category breaches its SLA most often?',
+    'How many high churn risk customers are there in each region?',
+    'What is the refund policy for orders above ₹50,000?',
+    'What discount can a Regional Sales Manager approve?',
+  ];
+  let aiCounter = 0;
+
+  async function loadAi() {
+    const chips = $('#ai-examples');
+    if (!chips.childElementCount) {
+      chips.innerHTML = AI_EXAMPLES.map((q) => `<button type="button" class="chip">${esc(q)}</button>`).join('');
+      $$('.chip', chips).forEach((c) => c.addEventListener('click', () => { $('#ai-input').value = c.textContent; askAi(c.textContent); }));
+    }
+    $('#doc-form').hidden = state.user.demo !== false || state.user.role !== 'ADMIN';
+    const status = $('#ai-status');
+    status.textContent = 'Connecting to the AI service… (on the free tier it can take up to a minute to wake up)';
+    try {
+      const [s, docs] = await Promise.all([
+        api('ai/status', { useCache: false, retries: 0 }),
+        api('ai/documents', { useCache: false, retries: 0 }),
+      ]);
+      if (s.configured === false) { status.textContent = 'The AI service is not configured on this deployment.'; return; }
+      status.innerHTML = s.llm_configured
+        ? `● Ready · model <code>${esc(s.model)}</code> · role isolation ${s.role_isolation ? 'on' : 'off'} · ${s.questions_today}/${s.daily_limit} questions used today`
+        : '● Ready, but no language model is configured. Policy questions still work with keyword search.';
+      $('#ai-docs').innerHTML = docs.map((d) => `<li><strong>${esc(d.title)}</strong><span class="muted small">${d.chunk_count} chunks · ${d.embedded ? 'semantic + keyword' : 'keyword only'}</span></li>`).join('') || '<li class="muted">No documents indexed yet.</li>';
+    } catch (e) {
+      status.textContent = e.message;
+    }
+  }
+
+  function bubble(html, cls) {
+    const thread = $('#ai-thread');
+    $('.ai-empty', thread)?.remove();
+    const div = document.createElement('div');
+    div.className = 'msg ' + cls;
+    div.innerHTML = html;
+    thread.appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return div;
+  }
+
+  const mdLite = (text) => esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[(\d+)\]/g, '<sup class="cite">[$1]</sup>').replace(/\n/g, '<br>');
+
+  const isMoneyCol = (c) => /(revenue|amount|value|sales|price|cost|spend|monetary|aov|margin_inr|ltv)/i.test(c) && !/(pct|percent|rate|share|count|units|orders)/i.test(c);
+  const isPctCol = (c) => /(pct|percent|rate|share)/i.test(c);
+  function fmtCell(col, v) {
+    if (v == null) return '–';
+    if (typeof v === 'number') return isMoneyCol(col) ? inr(v) : isPctCol(col) ? pct(v) : Number.isInteger(v) ? num(v) : v.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return esc(v);
+  }
+
+  async function askAi(question) {
+    question = (question || '').trim();
+    if (!question) return;
+    $('#ai-input').value = '';
+    bubble(esc(question), 'user');
+    const pending = bubble('<span class="typing">Thinking<span>.</span><span>.</span><span>.</span></span>', 'bot');
+    try {
+      const r = await api('ai/ask', { method: 'POST', body: { question }, retries: 0 });
+      pending.innerHTML = renderAnswer(r);
+      const chartBox = $('canvas', pending);
+      if (chartBox && r.chart) drawAiChart(chartBox.id, r);
+    } catch (e) {
+      pending.innerHTML = `<p class="error">${esc(e.message)}</p>`;
+    }
+  }
+
+  function renderAnswer(r) {
+    let html = `<div class="answer">${mdLite(r.answer || '')}</div>`;
+    if (r.route === 'sql' && r.status === 'OK') {
+      const chart = r.chart || {};
+      if (chart.type === 'number' && r.rows.length) {
+        const v = r.rows[0][chart.value_index ?? 0];
+        html += `<div class="big-number">${fmtCell(r.columns[chart.value_index ?? 0], v)}<span class="muted small">${esc(r.columns[chart.value_index ?? 0])}</span></div>`;
+      } else if (chart.type === 'line' || chart.type === 'bar') {
+        html += `<div class="chart-box ai-chart"><canvas id="ai-chart-${++aiCounter}" role="img" aria-label="${esc(chart.title || 'Result chart')}"></canvas></div>`;
+      }
+      if (r.rows.length) {
+        html += `<details class="result-table" ${chart.type === 'table' ? 'open' : ''}><summary>Result table · ${num(r.row_count)} row(s)${r.truncated ? ' (truncated)' : ''}</summary>
+          <div class="table-wrap"><table>${table(r.columns.map((c) => [esc(c), 'num-auto']), r.rows.slice(0, 50).map((row) => row.map((v, i) => [fmtCell(r.columns[i], v), typeof v === 'number' ? 'num' : ''])))}</table></div></details>`;
+      }
+    }
+    if (r.sql) {
+      html += `<details class="sql-details"><summary>SQL${r.attempts > 1 ? ` (self-corrected after ${r.attempts - 1} failed attempt)` : ''} · validated and run read-only</summary><pre><code>${esc(r.sql)}</code></pre></details>`;
+    }
+    if (r.status === 'REJECTED' || r.status === 'ERROR') {
+      html += `<p class="muted small">Reason: ${esc(r.error || 'unknown')}</p>`;
+    }
+    if (r.route === 'docs' && r.sources && r.sources.length) {
+      html += `<div class="sources"><div class="muted small">Sources${r.mode === 'extractive' ? ' (no language model: showing the best-matching passage)' : ''}</div>` +
+        r.sources.slice(0, 4).map((s) => `<div class="source ${s.cited ? 'cited' : ''}"><span class="n">[${s.n}]</span><div><strong>${esc(s.document)}</strong> › ${esc(s.section || '')}
+          <div class="muted small">${esc(s.snippet)}</div><div class="muted tiny">matched by ${esc((s.matched_by || []).join(' + '))}</div></div></div>`).join('') + '</div>';
+    }
+    if (r.latency_ms) html += `<div class="muted tiny">${(r.latency_ms / 1000).toFixed(1)} s · route: ${esc(r.route || '–')}</div>`;
+    return html;
+  }
+
+  function drawAiChart(id, r) {
+    const c = r.chart;
+    const labels = r.rows.map((row) => {
+      const v = row[c.label_index];
+      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? monthLabel(v.slice(0, 10)) : String(v);
+    });
+    const colors = [cssVar('--series-1'), cssVar('--series-2'), cssVar('--series-3')];
+    const datasets = (c.value_indexes || []).map((idx, k) => ({
+      label: r.columns[idx], data: r.rows.map((row) => row[idx]),
+      borderColor: colors[k], backgroundColor: colors[k], borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
+      tension: 0.25, borderRadius: 4, barPercentage: 0.7,
+    }));
+    const firstCol = r.columns[(c.value_indexes || [])[0]] || '';
+    const horizontal = c.type === 'bar' && labels.length > 6;
+    const valueAxis = { grid: { color: cssVar('--grid') }, border: { display: false }, beginAtZero: true,
+      ticks: { color: cssVar('--text-2'), callback: (v) => (isMoneyCol(firstCol) ? inrAxis(v) : isPctCol(firstCol) ? v + '%' : num(v)) } };
+    const labelAxis = { grid: { display: false }, border: { color: cssVar('--grid') }, ticks: { color: cssVar('--text-2'), autoSkipPadding: 10 } };
+    drawChart(id, {
+      type: c.type,
+      data: { labels, datasets },
+      options: baseOptions({
+        indexAxis: horizontal ? 'y' : 'x',
+        plugins: {
+          ...baseOptions().plugins,
+          legend: { ...baseOptions().plugins.legend, display: datasets.length > 1, position: 'top', align: 'end' },
+          tooltip: { ...baseOptions().plugins.tooltip, callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${fmtCell(ctx.dataset.label, horizontal ? ctx.parsed.x : ctx.parsed.y)}` } },
+        },
+        scales: horizontal ? { x: valueAxis, y: labelAxis } : { x: labelAxis, y: valueAxis },
+      }),
+    });
+  }
+
+  async function uploadDocument(form) {
+    const fd = new FormData(form);
+    try {
+      const r = await api('ai/documents', { method: 'POST', form: fd, retries: 0 });
+      toast(`Indexed "${r.document}" (${r.chunks ?? 0} chunks, ${r.status})`);
+      form.reset();
+      loadAi();
+    } catch (e) { toast('Upload failed: ' + e.message); }
+  }
+
+  // ------------------------------------------------------------------ INSIGHTS
+  async function loadInsights() {
+    const [latest, history] = await Promise.all([
+      api('insights/latest', { useCache: false }),
+      api('insights', { useCache: false }),
+    ]);
+    $('#insight-run').hidden = state.user.role !== 'ADMIN';
+    if (!latest || !latest.id) {
+      $('#insight-headline').textContent = 'No report has been generated yet';
+      $('#insight-meta').textContent = 'The scheduled job will create one, or an admin can generate one now.';
+      ['#insight-kpis', '#insight-bullets', '#table-anomalies', '#insight-sla', '#table-reports'].forEach((s) => ($(s).innerHTML = ''));
+      return;
+    }
+    renderInsight(latest);
+    $('#table-reports').innerHTML = table(['Generated', 'Data through', 'Trigger', 'E-mail'],
+      history.map((h) => [`<a href="#" data-report="${h.id}">${new Date(h.generated_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</a>`,
+        esc(h.as_of_date), esc(h.trigger), esc(h.email_status || '–')]));
+    $$('#table-reports [data-report]').forEach((a) => a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      renderInsight(await api('insights/' + a.dataset.report, { useCache: false }));
+    }));
+  }
+
+  function renderInsight(r) {
+    const p = r.payload || {};
+    $('#insight-headline').textContent = r.headline;
+    $('#insight-meta').textContent = `Data through ${r.as_of_date} · generated ${new Date(r.generated_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} (${r.trigger})` +
+      (r.email_status ? ` · e-mail: ${r.email_status}` : '');
+    $('#insight-summary').hidden = !r.summary;
+    $('#insight-summary').textContent = r.summary || '';
+    $('#insight-kpis').innerHTML = (p.kpis || []).map((k) => {
+      const value = k.value == null ? '–' : k.money ? inr(k.value) : num(k.value);
+      const cls = k.good == null ? '' : k.good ? 'up' : 'down';
+      const arrow = k.change_pct == null ? '' : k.change_pct >= 0 ? '▲' : '▼';
+      return kpi(esc(k.label), value, k.change_pct == null ? '<span>no prior week</span>' : `<span class="${cls}">${arrow} ${Math.abs(k.change_pct).toFixed(1)}%</span> vs previous 7 days`);
+    }).join('');
+    $('#insight-bullets').innerHTML = (p.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('');
+    $('#table-anomalies').innerHTML = (p.anomalies || []).length
+      ? table(['Segment', 'Type', ['This week', 'num'], ['8-week avg', 'num'], ['Change', 'num'], ['z-score', 'num']],
+        p.anomalies.map((a) => [esc(a.member), `<span class="tag">${esc(a.dimension)}</span>`, [inr(a.current), 'num'], [inr(a.baseline_mean), 'num'],
+          [`<span class="${a.change_pct > 0 ? 'up' : 'down'}">${a.change_pct > 0 ? '+' : ''}${a.change_pct.toFixed(0)}%</span>`, 'num'], [a.z.toFixed(1), 'num']]))
+      : '<tbody><tr><td class="muted">No anomalies this week.</td></tr></tbody>';
+    const sla = p.sla || {};
+    $('#insight-sla').innerHTML = `
+      <div><div class="v">${num(sla.breached_7d)}</div><div class="l">Breached (7d)</div></div>
+      <div><div class="v">${pct(sla.breach_rate_pct)}</div><div class="l">Breach rate (prev ${pct(sla.breach_rate_prev_pct)})</div></div>
+      <div><div class="v">${num(sla.open_overdue)}</div><div class="l">Open &amp; past SLA</div></div>
+      <div><div class="v">${num(sla.open_high_priority)}</div><div class="l">Open high / critical</div></div>`;
+    const link = $('#insight-email');
+    link.hidden = false;
+    link.onclick = async (e) => {
+      e.preventDefault();
+      const res = await api(`insights/${r.id}/email`, { raw: true, useCache: false });
+      const url = URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+      window.open(url, '_blank', 'noopener');
+    };
+  }
+
+  async function runInsightsNow() {
+    const btn = $('#insight-run');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try { await api('insights/run', { method: 'POST', retries: 0 }); await loadInsights(); toast('New report generated'); }
+    catch (e) { toast('Failed: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Generate a report now'; }
+  }
+
+  // ------------------------------------------------------------------ DATA (ETL)
+  async function loadData() {
+    const isAdmin = state.user.role === 'ADMIN';
+    const isOwner = isAdmin && state.user.demo === false;
+    $('#upload-form').hidden = !isAdmin;
+    $('#sample-run').hidden = !isAdmin;
+    const commit = $('#upload-form [name=commit]');
+    commit.disabled = !isOwner;
+    if (!isOwner) commit.checked = false;
+    $('#commit-note').textContent = !isAdmin
+      ? 'Analysts can read every data-quality report. Loading data needs the Admin role.'
+      : isOwner ? 'Unchecked = dry run: the file is fully validated and reported, then the transaction is rolled back.'
+        : 'Demo accounts always run as a dry run: full validation and report, then the transaction is rolled back, so the shared demo database stays unchanged. Only the owner account can commit.';
+    loadRuns();
+    loadSamples(false);
+  }
+
+  async function loadSamples(refresh) {
+    const box = $('#sample-files');
+    box.innerHTML = '<div class="muted small">Preparing a sample batch from the live database… (the data service may need a minute to wake up)</div>';
+    try {
+      const s = await api('data/samples' + (refresh ? '?refresh=true' : ''), { useCache: false, retries: 0 });
+      box.innerHTML = `<div class="muted small">Covers ${esc(s.period_start)} to ${esc(s.period_end)}</div>` +
+        s.files.map((f) => `<div class="sample-file"><code>${esc(f.name)}</code><span class="muted small">${num(f.rows)} rows</span>
+          <a href="#" data-file="${esc(f.name)}" class="small">Download</a></div>`).join('');
+      $$('[data-file]', box).forEach((a) => a.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const res = await api('data/samples/' + a.dataset.file, { raw: true, useCache: false, retries: 0 });
+        const url = URL.createObjectURL(await res.blob());
+        const link = Object.assign(document.createElement('a'), { href: url, download: a.dataset.file });
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }));
+    } catch (e) {
+      box.innerHTML = `<div class="muted small">${esc(e.message)}</div>`;
+    }
+  }
+
+  async function loadRuns() {
+    const runs = await api('data/runs', { useCache: false });
+    $('#table-runs').innerHTML = runs.length ? table(
+      [['#', 'rank'], 'When', 'File', 'Entity', 'Mode', 'Status', ['Rows', 'num'], ['Loaded', 'num'], ['Rejected', 'num'], ['Flagged', 'num'], ['Quality', 'num']],
+      runs.map((r) => [[`<a href="#" data-run="${r.id}">${r.id}</a>`, 'rank'], new Date(r.started_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
+        `<code>${esc(r.file_name)}</code>`, esc(r.entity), `<span class="tag">${esc(r.mode)}</span>`, statusPill(r.status),
+        [num(r.rows_in), 'num'], [num(r.rows_loaded), 'num'], [num(r.rows_rejected), 'num'], [num(r.rows_flagged), 'num'], [r.quality_score == null ? '–' : pct(r.quality_score), 'num']]))
+      : '<tbody><tr><td class="muted">No pipeline runs yet. Try the sample batch.</td></tr></tbody>';
+    $$('#table-runs [data-run]').forEach((a) => a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const run = await api('data/runs/' + a.dataset.run, { useCache: false });
+      showRunReports([run], `Run #${run.id}: ${run.file_name}`, `${run.mode} · ${run.status} · ${run.source} · ${run.triggered_by || ''}`);
+    }));
+  }
+
+  const statusPill = (s) => `<span class="pill pill-${String(s).toLowerCase()}">${esc(s)}</span>`;
+
+  function showRunReports(results, title, meta) {
+    $('#run-result-card').hidden = false;
+    $('#run-result-title').textContent = title;
+    $('#run-result-meta').textContent = meta || '';
+    $('#run-result').innerHTML = results.map((r) => {
+      const summary = r.issue_summary || [];
+      const issues = r.issues || [];
+      return `<div class="run-report">
+        <div class="run-head"><code>${esc(r.file_name)}</code> <span class="tag">${esc(r.entity)}</span> ${statusPill(r.status)} <span class="tag">${esc(r.mode)}</span>
+          ${r.error || r.error_message ? `<span class="error small">${esc(r.error || r.error_message)}</span>` : ''}</div>
+        <div class="kpis compact">
+          ${kpi('Rows in', num(r.rows_in), '<span>after removing blank rows</span>')}
+          ${kpi('Loaded', num(r.rows_loaded), `<span>${num(r.rows_inserted)} new · ${num(r.rows_updated)} updated</span>`)}
+          ${kpi('Rejected', num(r.rows_rejected), '<span>errors</span>')}
+          ${kpi('Duplicates', num(r.rows_duplicate), '<span>skipped</span>')}
+          ${kpi('Flagged', num(r.rows_flagged), '<span>loaded with a warning</span>')}
+          ${kpi('Quality score', r.quality_score == null ? '–' : pct(r.quality_score), '<span>clean rows / rows in</span>')}
+        </div>
+        ${summary.length ? `<div class="table-wrap"><table>${table(['Severity', 'Rule', 'Column', ['Rows', 'num']],
+          summary.map((s) => [statusPill(s.severity), `<code>${esc(s.rule)}</code>`, esc(s.column ?? s.column_name ?? '–'), [num(s.count), 'num']]))}</table></div>` : ''}
+        ${issues.length ? `<details><summary>Row-level issues (${num(issues.length)} shown)</summary><div class="table-wrap"><table>${table(
+          [['Line', 'num'], 'Severity', 'Rule', 'Column', 'Value', 'Message'],
+          issues.slice(0, 80).map((i) => [[i.line ?? i.row_number ?? '–', 'num'], statusPill(i.severity), `<code>${esc(i.rule)}</code>`, esc(i.column ?? i.column_name ?? '–'),
+            `<code>${esc(i.raw_value ?? '')}</code>`, esc(i.message)]))}</table></div></details>` : ''}
+      </div>`;
+    }).join('');
+    $('#run-result-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function runSampleBatch() {
+    const btn = $('#sample-run');
+    const commit = $('#upload-form [name=commit]').checked && state.user.demo === false;
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const r = await api('data/samples/run?commit=' + commit, { method: 'POST', retries: 0 });
+      showRunReports(r.results, `Sample batch ${r.period_start} to ${r.period_end}`,
+        `${r.mode}${r.forced_dry_run ? ' (demo accounts always run as a dry run)' : ''} · ${r.results.length} files processed atomically in dependency order`);
+      if (commit) { state.cache.clear(); loadSamples(false); }
+      loadRuns();
+    } catch (e) { toast('Pipeline failed: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Run the whole batch'; }
+  }
+
+  async function uploadCsv(form) {
+    const fd = new FormData(form);
+    const commit = form.commit.checked && state.user.demo === false;
+    fd.set('commit', String(commit));
+    if (!fd.get('entity')) fd.delete('entity');
+    const btn = $('button[type=submit]', form);
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const r = await api('data/upload', { method: 'POST', form: fd, retries: 0 });
+      showRunReports([r], `Upload: ${r.file_name}`, `${r.mode}${r.forced_dry_run ? ' (demo accounts always run as a dry run)' : ''}`);
+      if (commit) state.cache.clear();
+      loadRuns();
+    } catch (e) { toast('Upload failed: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Run pipeline'; }
   }
 
   // ------------------------------------------------------------------ table helper
@@ -491,13 +890,15 @@
       loadTab(state.tab);
     }));
     $('#sql-close').addEventListener('click', () => $('#sql-dialog').close());
-    $('#clear-cache').addEventListener('click', async () => {
-      try {
-        await api('admin/cache/clear', { method: 'POST' });
-        state.cache.clear();
-        $('#cache-status').textContent = 'Server cache cleared at ' + new Date().toLocaleTimeString('en-IN');
-      } catch (e) { toast('Failed: ' + e.message); }
-    });
+    $('#clear-cache').addEventListener('click', () => adminAction('admin/cache/clear', 'Cache clear'));
+    $('#run-segments').addEventListener('click', () => adminAction('admin/segments/run', 'Segmentation'));
+    $('#reindex-docs').addEventListener('click', () => adminAction('admin/documents/reindex', 'Re-indexing'));
+    $('#ai-form').addEventListener('submit', (e) => { e.preventDefault(); askAi($('#ai-input').value); });
+    $('#doc-form').addEventListener('submit', (e) => { e.preventDefault(); uploadDocument(e.target); });
+    $('#insight-run').addEventListener('click', runInsightsNow);
+    $('#upload-form').addEventListener('submit', (e) => { e.preventDefault(); uploadCsv(e.target); });
+    $('#sample-run').addEventListener('click', runSampleBatch);
+    $('#sample-refresh').addEventListener('click', () => loadSamples(true));
     // Re-draw charts with the new palette when the OS theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state.token) loadTab(state.tab); });
 

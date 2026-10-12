@@ -40,7 +40,8 @@ public class DataServiceClient {
     public DataServiceClient(DataServiceProperties props, ObjectMapper json) {
         this.props = props;
         this.json = json;
-        HttpClient jdk = HttpClient.newBuilder().connectTimeout(props.connectTimeout()).build();
+        HttpClient jdk = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(props.connectTimeout()).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(jdk);
         factory.setReadTimeout(props.readTimeout());
         this.http = RestClient.builder()
