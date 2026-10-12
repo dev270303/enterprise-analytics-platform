@@ -206,6 +206,9 @@ dialog pre { margin: 0; padding: 16px 18px; max-height: 70vh; overflow: auto; ba
 
 /* AI analyst */
 .ai-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.ai-main, .ai-side, .msg { min-width: 0; }
+.msg { overflow-wrap: anywhere; }
+.ai-thread { overflow-x: hidden; }
 .ai-main { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 560px; box-shadow: var(--shadow); }
 .ai-status { padding: 10px 16px; border-bottom: 1px solid var(--border); }
 .ai-thread { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; max-height: 68vh; }

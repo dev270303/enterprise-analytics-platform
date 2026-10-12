@@ -1,5 +1,6 @@
 package com.eap.ai;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,7 @@ public class RateLimiter {
     private final Duration window;
     private final Clock clock;
 
+    @Autowired
     public RateLimiter(@Value("${app.ai.demo-requests-per-hour:15}") int demoLimit,
                        @Value("${app.ai.owner-requests-per-hour:200}") int ownerLimit) {
         this(demoLimit, ownerLimit, Duration.ofHours(1), Clock.systemUTC());

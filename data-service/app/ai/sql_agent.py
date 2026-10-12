@@ -149,7 +149,7 @@ def suggest_chart(columns: list[str], rows: list[list], hint: str | None, title:
     label_idx = next((i for i in range(len(columns)) if i not in numeric), None)
     if label_idx is None:
         return {"type": "table", "title": title}
-    values = [i for i in numeric if i != label_idx][:3]
+    values = [i for i in numeric if i != label_idx][:1]   # one measure: never a dual-axis chart
     first = str(rows[0][label_idx])
     looks_temporal = (len(first) >= 7 and first[:4].isdigit() and first[4] == "-") or columns[label_idx] in ("month", "week", "day", "date", "year", "quarter")
     if looks_temporal and len(rows) >= 3:

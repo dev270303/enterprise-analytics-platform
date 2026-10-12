@@ -630,7 +630,10 @@
       }
     }
     if (r.sql) {
-      html += `<details class="sql-details"><summary>SQL${r.attempts > 1 ? ` (self-corrected after ${r.attempts - 1} failed attempt)` : ''} · validated and run read-only</summary><pre><code>${esc(r.sql)}</code></pre></details>`;
+      const label = r.status === 'OK'
+        ? `SQL${r.attempts > 1 ? ` (self-corrected after ${r.attempts - 1} failed attempt)` : ''} · validated and run read-only`
+        : `SQL attempted · ${r.status === 'REJECTED' ? 'blocked by the validator, never executed' : 'failed'}`;
+      html += `<details class="sql-details"><summary>${label}</summary><pre><code>${esc(r.sql)}</code></pre></details>`;
     }
     if (r.status === 'REJECTED' || r.status === 'ERROR') {
       html += `<p class="muted small">Reason: ${esc(r.error || 'unknown')}</p>`;
@@ -638,7 +641,7 @@
     if (r.route === 'docs' && r.sources && r.sources.length) {
       html += `<div class="sources"><div class="muted small">Sources${r.mode === 'extractive' ? ' (no language model: showing the best-matching passage)' : ''}</div>` +
         r.sources.slice(0, 4).map((s) => `<div class="source ${s.cited ? 'cited' : ''}"><span class="n">[${s.n}]</span><div><strong>${esc(s.document)}</strong> › ${esc(s.section || '')}
-          <div class="muted small">${esc(s.snippet)}</div><div class="muted tiny">matched by ${esc((s.matched_by || []).join(' + '))}</div></div></div>`).join('') + '</div>';
+          <div class="muted small">${esc(String(s.snippet || '').replace(/\*\*/g, '').replace(/^[-*]\s+/gm, ''))}</div><div class="muted tiny">matched by ${esc((s.matched_by || []).join(' + '))}</div></div></div>`).join('') + '</div>';
     }
     if (r.latency_ms) html += `<div class="muted tiny">${(r.latency_ms / 1000).toFixed(1)} s · route: ${esc(r.route || '–')}</div>`;
     return html;
@@ -651,13 +654,14 @@
       return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? monthLabel(v.slice(0, 10)) : String(v);
     });
     const colors = [cssVar('--series-1'), cssVar('--series-2'), cssVar('--series-3')];
-    const datasets = (c.value_indexes || []).map((idx, k) => ({
+    // one measure per chart (never two y-scales); the full result is in the table below
+    const datasets = (c.value_indexes || []).slice(0, 1).map((idx, k) => ({
       label: r.columns[idx], data: r.rows.map((row) => row[idx]),
       borderColor: colors[k], backgroundColor: colors[k], borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
       tension: 0.25, borderRadius: 4, barPercentage: 0.7,
     }));
     const firstCol = r.columns[(c.value_indexes || [])[0]] || '';
-    const horizontal = c.type === 'bar' && labels.length > 6;
+    const horizontal = c.type === 'bar' && (labels.length > 6 || labels.some((l) => l.length > 14));
     const valueAxis = { grid: { color: cssVar('--grid') }, border: { display: false }, beginAtZero: true,
       ticks: { color: cssVar('--text-2'), callback: (v) => (isMoneyCol(firstCol) ? inrAxis(v) : isPctCol(firstCol) ? v + '%' : num(v)) } };
     const labelAxis = { grid: { display: false }, border: { color: cssVar('--grid') }, ticks: { color: cssVar('--text-2'), autoSkipPadding: 10 } };
